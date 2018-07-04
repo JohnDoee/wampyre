@@ -8,6 +8,7 @@ from twisted.internet import reactor
 
 from .base import TransportBase
 
+# Based on Autobahn ApplicationRunner
 
 class ApplicationRunner(object):
     log = txaio.make_logger()
