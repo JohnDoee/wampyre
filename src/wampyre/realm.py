@@ -47,7 +47,7 @@ class Realm:
 
         return True
 
-    def publish(self, session, options, topic, args=None, kwargs=None):
+    def publish(self, options, topic, args=None, kwargs=None):
         """
         Publish a message to a topic.
         Optionally returns a publication_id.
@@ -201,16 +201,41 @@ class Realm:
 
             del self.calls[session]
 
+        if not self.sessions:
+            realm_manager.discard_realm(self.realm)
+
 
 class RealmManager:
     def __init__(self):
         self.realms = {}
+        self.callbacks = []
 
     def get_realm(self, realm):
         if realm not in self.realms:
+            self._trigger_callback('create', realm)
             self.realms[realm] = Realm(realm)
 
         return self.realms[realm]
 
+    def get_realms(self):
+        return self.realms.values()
+
+    def discard_realm(self, realm):
+        if realm in self.realms:
+            self._trigger_callback('discard', realm)
+            del self.realms[realm]
+
+    def _trigger_callback(self, callback_type, realm):
+        for callback in self.callbacks:
+            f(callback_type=callback_type, realm=realm)
+
+    def register_callback(self, f):
+        self.callbacks.append(f)
+
+    def unregister_callback(self, f):
+        try:
+            self.callbacks.remove(f)
+        except ValueError:
+            pass
 
 realm_manager = RealmManager()

@@ -153,7 +153,7 @@ class Session:
 
     ### Broker functionality ###
     def handle_publish(self, request_id, options, topic, args=None, kwargs=None):
-        publish_id = self.realm.publish(self, options, topic, args, kwargs)
+        publish_id = self.realm.publish(options, topic, args, kwargs)
         if publish_id:
             self.send(OP.PUBLISHED, request_id, publish_id)
 
