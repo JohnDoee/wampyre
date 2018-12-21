@@ -1,5 +1,9 @@
+import logging
+
 from .opcodes import OP
 from .utils import generate_id
+
+logger = logging.getLogger(__name__)
 
 
 class Realm:

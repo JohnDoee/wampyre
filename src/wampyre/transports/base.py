@@ -21,3 +21,6 @@ class TransportBase(ABC):
 
     def receive(self, *args):
         self.session.handle_command(*args)
+
+    def session_lost(self):
+        self.session.close_session()

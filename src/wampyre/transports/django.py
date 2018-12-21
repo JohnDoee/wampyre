@@ -28,6 +28,9 @@ class WAMPRouter(JsonWebsocketConsumer):
         else:
             return True
 
+    def disconnect(self, code):
+        self.transport.session_lost()
+
 
 class DjangoWebsocketTransport(TransportBase):
     def __init__(self, consumer):
