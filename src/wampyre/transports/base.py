@@ -24,3 +24,7 @@ class TransportBase(ABC):
 
     def session_lost(self):
         self.session.close_session()
+
+    @abstractmethod
+    def method_uri_allowed(self, method, uri):
+        """Check if method and uri call is allowed by this transport"""

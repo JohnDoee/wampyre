@@ -13,6 +13,10 @@ STATE_CLOSED = 3
 logger = logging.getLogger(__name__)
 
 
+class AccessDeniedException(Exception):
+    """Transport is not allowed to access a given method"""
+
+
 class Session:
     state = STATE_UNAUTHENTICATED
 
@@ -106,6 +110,10 @@ class Session:
 
         try:
             func(*args)
+        except AccessDeniedException:
+            logger.warning('Client tried to access method it was not allowed to.')
+            self.send(OP.ERROR, opcode, args[0], {}, 'wamp.error.not_authorized')
+            return
         except:
             logger.exception('Failed to execute command %r with args %r' % (func, args, ))
             self.send(OP.ABORT, {'message': 'Failed to execute command'}, 'wamp.error.protocol_violation')
@@ -161,11 +169,15 @@ class Session:
 
     ### Broker functionality ###
     def handle_publish(self, request_id, options, topic, args=None, kwargs=None):
+        self.method_uri_allowed('publish', topic)
+
         publish_id = self.realm.publish(options, topic, args, kwargs)
         if publish_id:
             self.send(OP.PUBLISHED, request_id, publish_id)
 
     def handle_subscribe(self, request_id, options, topic):
+        self.method_uri_allowed('subscribe', topic)
+
         subscription_id = self.realm.subscribe(self, options, topic)
         self.send(OP.SUBSCRIBED, request_id, subscription_id)
 
@@ -177,10 +189,14 @@ class Session:
 
     ### Dealer functionality ###
     def handle_call(self, request_id, options, procedure, args=None, kwargs=None):
+        self.method_uri_allowed('call', procedure)
+
         if not self.realm.call(self, request_id, procedure, args, kwargs):
             self.send(OP.ERROR, OP.CALL, request_id, {}, 'wamp.error.no_such_procedure')
 
     def handle_register(self, request_id, options, procedure):
+        self.method_uri_allowed('register', procedure)
+
         registration_id = self.realm.register(self, procedure)
         if registration_id:
             self.send(OP.REGISTERED, request_id, registration_id)
@@ -210,3 +226,7 @@ class Session:
     def generate_id(self):
         self.last_id += 1
         return self.last_id
+
+    def method_uri_allowed(self, method, uri):
+        if not self.transport.method_uri_allowed(method, uri):
+            raise AccessDeniedException()

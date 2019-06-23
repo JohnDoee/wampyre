@@ -40,6 +40,9 @@ class ApplicationRunner(object):
         # Trigger a start
         protocol.onOpen()
 
+        # Return callable to shut down the application
+        return transport.close_session
+
 
 class WampLocalProtocol:
     log = txaio.make_logger()
@@ -86,7 +89,10 @@ class AutobahnTransport(TransportBase):
         return True
 
     def close_session(self):
-        pass # TODO
+        self.session_lost()
+
+    def method_uri_allowed(self, method, uri):
+        return True
 
 
 class PythonObjectSerializer:

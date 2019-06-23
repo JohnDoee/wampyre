@@ -13,6 +13,7 @@ def transport_base():
             self._sends = []
             self._closed = False
             self._last_id = 0
+            self._method_uri_allowed = lambda method, uri:True
 
             super().__init__()
 
@@ -44,6 +45,9 @@ def transport_base():
 
         def disconnect(self):
             self.session.close_session()
+
+        def method_uri_allowed(self, method, uri):
+            return self._method_uri_allowed(method, uri)
 
     return TestTransportBase()
 
@@ -429,3 +433,22 @@ def test_inaccessible_realm(transport):
     assert args[1] == 'wamp.error.no_such_realm'
     assert transport.is_empty()
     assert transport.session.state == STATE_CLOSED
+
+
+def test_uri_denied(transport):
+    transport.connect('a.realm')
+    transport._method_uri_allowed = lambda method, uri: uri == 'b.topic'
+
+    transport.receive(OP.SUBSCRIBE, transport.generate_id(), {}, 'a.topic')
+    opcode, args = transport.get_reply()
+    assert opcode == OP.ERROR
+    assert Pattern('opcode', 'id', 'dict', 'uri!')(*args)
+    assert args[0] == OP.SUBSCRIBE
+    assert args[3] == 'wamp.error.not_authorized'
+    assert transport.is_empty()
+
+    transport.receive(OP.SUBSCRIBE, transport.generate_id(), {}, 'b.topic')
+    opcode, args = transport.get_reply()
+    assert opcode == OP.SUBSCRIBED
+    assert Pattern('id', 'id')(*args)
+    assert transport._last_id == args[0]

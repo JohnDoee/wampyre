@@ -233,7 +233,7 @@ class RealmManager:
 
     def _trigger_callback(self, callback_type, realm):
         for callback in self.callbacks:
-            f(callback_type=callback_type, realm=realm)
+            callback(callback_type=callback_type, realm=realm)
 
     def register_callback(self, f):
         self.callbacks.append(f)

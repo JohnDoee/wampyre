@@ -4,10 +4,13 @@ from .base import TransportBase
 
 
 class WAMPRouter(JsonWebsocketConsumer):
+    guard = None
     realm_authenticator = None
+    user = None
+
     def __init__(self, *args, **kwargs):
-        if 'realm_authenticator' in kwargs:
-            self.realm_authenticator = kwargs.pop('realm_authenticator')
+        self.realm_authenticator = kwargs.pop('realm_authenticator', None)
+        self.guard = kwargs.pop('guard', None)
 
         super().__init__(*args, **kwargs)
         self.transport = DjangoWebsocketTransport(self)
@@ -47,3 +50,9 @@ class DjangoWebsocketTransport(TransportBase):
 
     def close_session(self):
         self.consumer.close()
+
+    def method_uri_allowed(self, method, uri):
+        if self.consumer.guard:
+            return self.consumer.guard(self.consumer.user, method, uri)
+        else:
+            return True
