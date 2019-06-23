@@ -11,9 +11,11 @@ class Realm:
         self.realm = realm
 
         self.subscriptions = {}
+        self.subscription_patterns = {}
         self.subscription_ids = {}
 
         self.registrations = {}
+        self.registration_patterns = {}
         self.registration_ids = {}
 
         self.calls = {}

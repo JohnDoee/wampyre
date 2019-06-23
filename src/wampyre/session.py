@@ -55,7 +55,7 @@ class Session:
 
             OP.SUBSCRIBE: (
                 self.handle_subscribe,
-                Pattern('id', 'dict', 'uri', 'list?', 'dict?'),
+                Pattern('id', 'dict', 'uriw', 'list?', 'dict?'),
                 STATE_AUTHENTICATED,
             ),
             OP.UNSUBSCRIBE: (
@@ -71,7 +71,7 @@ class Session:
             ),
             OP.REGISTER: (
                 self.handle_register,
-                Pattern('id', 'dict', 'uri'),
+                Pattern('id', 'dict', 'uriw'),
                 STATE_AUTHENTICATED,
             ),
             OP.UNREGISTER: (
@@ -132,8 +132,16 @@ class Session:
         self.state = STATE_AUTHENTICATED
         self.send(OP.WELCOME, generate_id(), {
             'roles':{
-                'broker': {},
-                'dealer': {},
+                'broker': {
+                    'features': {
+                        'pattern_based_subscription': True,
+                    },
+                },
+                'dealer': {
+                    'features': {
+                        'pattern_based_registration': True,
+                    },
+                },
             }
         })
 
@@ -188,6 +196,7 @@ class Session:
     def handle_yield(self, request_id, options, args=None, kwargs=None):
         self.realm.yield_(self, request_id, args, kwargs)
 
+    ### General functionality ###
     def close_session(self):
         self.state = STATE_CLOSED
         self.transport.close_session()

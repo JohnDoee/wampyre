@@ -9,6 +9,7 @@ class UnknownPatternException(Exception):
 
 class Pattern:
     uri_pattern = re.compile(r"^([0-9a-z_]+\.)*([0-9a-z_]+)$")
+    uri_wildcard_pattern = re.compile(r"^([0-9a-z_]+\.{1,2})*([0-9a-z_]+)$")
     min_id = 1
     max_id = 2 ** 53
 
@@ -34,8 +35,12 @@ class Pattern:
 
             value = args[i]
 
-            if arg_pattern == 'uri':
-                if not isinstance(value, str) or not self.uri_pattern.match(value):
+            if arg_pattern == 'uri' or arg_pattern == 'uriw':
+                if arg_pattern == 'uriw':
+                    uri_pattern = self.uri_wildcard_pattern
+                else:
+                    uri_pattern = self.uri_pattern
+                if not isinstance(value, str) or not uri_pattern.match(value):
                     return False
                 if not system and value.split('.')[0] == 'wamp':
                     return False

@@ -13,12 +13,27 @@ def test_lengths():
 def test_uri():
     p = Pattern('uri')
     assert p('com.myapp.myprocedure1') == True
+    assert p('com.myapp..myprocedure1') == False
     assert p('.myapp.myprocedure1') == False
     assert p('com.myapp.myproced ure1') == False
     assert p('wamp.myapp.myprocedure1') == False
 
     p = Pattern('uri!')
     assert p('wamp.myapp.myprocedure1') == True
+
+
+def test_uriw():
+    p = Pattern('uriw')
+    assert p('com.myapp..myprocedure1') == True
+    assert p('.myapp.myprocedure1') == False
+    assert p('com.myapp.myproced ure1') == False
+    assert p('com.myapp.myproced..ure1') == True
+    assert p('com.myapp.myproced...ure1') == False
+    assert p('wamp.myapp.myprocedure1') == False
+
+    p = Pattern('uriw!')
+    assert p('wamp.myapp.myprocedure1') == True
+    assert p('wamp.myapp..myprocedure1') == True
 
 
 def test_id():
