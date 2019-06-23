@@ -1,4 +1,3 @@
-
 class OP:
     HELLO = 1
     WELCOME = 2

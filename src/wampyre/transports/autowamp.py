@@ -10,6 +10,7 @@ from .base import TransportBase
 
 # Based on Autobahn ApplicationRunner
 
+
 class ApplicationRunner(object):
     log = txaio.make_logger()
 
@@ -19,15 +20,19 @@ class ApplicationRunner(object):
 
     def run(self, make):
         if callable(make):
+
             def create():
                 cfg = ComponentConfig(self.realm, self.extra)
                 try:
                     session = make(cfg)
                 except Exception:
-                    self.log.failure('ApplicationSession could not be instantiated: {log_failure.value}')
+                    self.log.failure(
+                        "ApplicationSession could not be instantiated: {log_failure.value}"
+                    )
                     raise
                 else:
                     return session
+
         else:
             create = make
 
@@ -58,7 +63,7 @@ class WampLocalProtocol:
         self._session.onOpen(self)
 
     def send(self, message):
-        print('d', message, message.marshal())
+        print("d", message, message.marshal())
         reactor.callInThread(self._transport.receive, *message.marshal())
 
     def isOpen():
@@ -73,6 +78,7 @@ class WampLocalProtocol:
     def onMessage(self, payload):
         for msg in self._serializer.unserialize(payload):
             reactor.callFromThread(self._session.onMessage, msg)
+
 
 ITransport.register(WampLocalProtocol)
 
@@ -96,7 +102,7 @@ class AutobahnTransport(TransportBase):
 
 
 class PythonObjectSerializer:
-    NAME = 'python'
+    NAME = "python"
 
     def serialize(self, obj):
         return obj
@@ -104,10 +110,12 @@ class PythonObjectSerializer:
     def unserialize(self, payload):
         return [payload]
 
+
 IObjectSerializer.register(PythonObjectSerializer)
 
 
 class PythonSerializer(Serializer):
-    SERIALIZER_ID = 'python'
+    SERIALIZER_ID = "python"
+
 
 ISerializer.register(PythonSerializer)

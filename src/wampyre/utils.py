@@ -7,8 +7,8 @@ def generate_id():
 
 
 def uri_pattern_to_prefix(uri):
-    return re.compile(r'^%s.*$' % (re.escape(uri), ))
+    return re.compile(r"^%s.*$" % (re.escape(uri),))
 
 
 def uri_pattern_to_wildcard(uri):
-    return re.compile(r'^%s$' % (re.escape(uri).replace(r'\.\.', r'\.[0-9a-z_]+\.'), ))
+    return re.compile(r"^%s$" % (re.escape(uri).replace(r"\.\.", r"\.[0-9a-z_]+\."),))

@@ -9,19 +9,19 @@ class WAMPRouter(JsonWebsocketConsumer):
     user = None
 
     def __init__(self, *args, **kwargs):
-        self.realm_authenticator = kwargs.pop('realm_authenticator', None)
-        self.guard = kwargs.pop('guard', None)
+        self.realm_authenticator = kwargs.pop("realm_authenticator", None)
+        self.guard = kwargs.pop("guard", None)
 
         super().__init__(*args, **kwargs)
         self.transport = DjangoWebsocketTransport(self)
 
     def connect(self):
-        self.user = self.scope.get('user')
-        self.accept('wamp.2.json')
+        self.user = self.scope.get("user")
+        self.accept("wamp.2.json")
 
     def receive_json(self, content):
         if not isinstance(content, list):
-            pass # TODO: some error?
+            pass  # TODO: some error?
 
         self.transport.receive(*content)
 

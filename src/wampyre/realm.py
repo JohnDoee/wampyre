@@ -66,11 +66,13 @@ class Realm:
                 if kwargs is not None:
                     event_args.append(kwargs)
 
-            for subscription_id, subscription_session in self.subscriptions[topic].items():
+            for subscription_id, subscription_session in self.subscriptions[
+                topic
+            ].items():
                 cmd = [OP.EVENT, subscription_id, publication_id, {}] + event_args
                 subscription_session.send(*cmd)
 
-        if options.get('acknowledge'):
+        if options.get("acknowledge"):
             return publication_id
 
     ### Dealer functionality ###
@@ -121,7 +123,12 @@ class Realm:
                 invocation_args.append(kwargs)
 
         invocation_request_id = procedure_session.generate_id()
-        cmd = [OP.INVOCATION, invocation_request_id, procedure_registration_id, {}] + invocation_args
+        cmd = [
+            OP.INVOCATION,
+            invocation_request_id,
+            procedure_registration_id,
+            {},
+        ] + invocation_args
         procedure_session.send(*cmd)
 
         self.calls.setdefault(session, set()).add(request_id)
@@ -152,7 +159,9 @@ class Realm:
         cmd = [OP.RESULT, call_id, {}] + call_args
         call_session.send(*cmd)
 
-    def error_invocation(self, session, invocation_id, details, error, args=None, kwargs=None):
+    def error_invocation(
+        self, session, invocation_id, details, error, args=None, kwargs=None
+    ):
         """
         An invocation call failed.
         """
@@ -197,7 +206,9 @@ class Realm:
             for invocation_id in self.invocations[session]:
                 request_id = self.invocation_to_call_id[invocation_id]
                 if request_id in self.call_ids:
-                    self.error_invocation(session, request_id, {}, 'wamp.error.callee_lost')
+                    self.error_invocation(
+                        session, request_id, {}, "wamp.error.callee_lost"
+                    )
 
             del self.invocations[session]
 
@@ -218,7 +229,7 @@ class RealmManager:
 
     def get_realm(self, realm):
         if realm not in self.realms:
-            self._trigger_callback('create', realm)
+            self._trigger_callback("create", realm)
             self.realms[realm] = Realm(realm)
 
         return self.realms[realm]
@@ -228,7 +239,7 @@ class RealmManager:
 
     def discard_realm(self, realm):
         if realm in self.realms:
-            self._trigger_callback('discard', realm)
+            self._trigger_callback("discard", realm)
             del self.realms[realm]
 
     def _trigger_callback(self, callback_type, realm):
@@ -243,5 +254,6 @@ class RealmManager:
             self.callbacks.remove(f)
         except ValueError:
             pass
+
 
 realm_manager = RealmManager()

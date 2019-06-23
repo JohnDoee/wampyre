@@ -15,17 +15,21 @@ class Pattern:
 
     def __init__(self, *pattern):
         self.pattern = pattern
-        self.opcodes = {opcode for (opcode_name, opcode) in OP.__dict__.items() if not opcode_name.startswith('_')}
+        self.opcodes = {
+            opcode
+            for (opcode_name, opcode) in OP.__dict__.items()
+            if not opcode_name.startswith("_")
+        }
 
     def __call__(self, *args):
         if len(args) > len(self.pattern):
             return False
 
         for i, arg_pattern in enumerate(self.pattern):
-            optional = arg_pattern.endswith('?')
-            arg_pattern = arg_pattern.rstrip('?')
-            system = arg_pattern.endswith('!')
-            arg_pattern = arg_pattern.rstrip('!')
+            optional = arg_pattern.endswith("?")
+            arg_pattern = arg_pattern.rstrip("?")
+            system = arg_pattern.endswith("!")
+            arg_pattern = arg_pattern.rstrip("!")
 
             if len(args) <= i:
                 if optional:
@@ -35,28 +39,34 @@ class Pattern:
 
             value = args[i]
 
-            if arg_pattern == 'uri' or arg_pattern == 'uriw':
-                if arg_pattern == 'uriw':
+            if arg_pattern == "uri" or arg_pattern == "uriw":
+                if arg_pattern == "uriw":
                     uri_pattern = self.uri_wildcard_pattern
                 else:
                     uri_pattern = self.uri_pattern
                 if not isinstance(value, str) or not uri_pattern.match(value):
                     return False
-                if not system and value.split('.')[0] == 'wamp':
+                if not system and value.split(".")[0] == "wamp":
                     return False
-            elif arg_pattern == 'id':
-                if not isinstance(value, int) or value < self.min_id or value > self.max_id:
+            elif arg_pattern == "id":
+                if (
+                    not isinstance(value, int)
+                    or value < self.min_id
+                    or value > self.max_id
+                ):
                     return False
-            elif arg_pattern == 'opcode':
+            elif arg_pattern == "opcode":
                 if value not in self.opcodes:
                     return False
-            elif arg_pattern == 'dict':
+            elif arg_pattern == "dict":
                 if not isinstance(value, dict):
                     return False
-            elif arg_pattern == 'list':
+            elif arg_pattern == "list":
                 if not isinstance(value, list) and not isinstance(value, tuple):
                     return False
             else:
-                raise UnknownPatternException('%s is not a known pattern matcher' % (arg_pattern, ))
+                raise UnknownPatternException(
+                    "%s is not a known pattern matcher" % (arg_pattern,)
+                )
 
         return True
