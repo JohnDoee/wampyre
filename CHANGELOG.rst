@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Version 1.1.0 (29-06-2019)
+-----------------------------------------------------------
+
+*   Added support for individual URL authentication
+*   Added support for wildcard url subscription
+*   Now using black for formatting
+
+
 Version 1.0.2 (21-12-2018)
 -----------------------------------------------------------
 

@@ -1,7 +1,7 @@
 import logging
 
 from .opcodes import OP
-from .utils import generate_id
+from .utils import generate_id, URIPattern
 
 logger = logging.getLogger(__name__)
 
@@ -10,13 +10,8 @@ class Realm:
     def __init__(self, realm):
         self.realm = realm
 
-        self.subscriptions = {}
-        self.subscription_patterns = {}
-        self.subscription_ids = {}
-
-        self.registrations = {}
-        self.registration_patterns = {}
-        self.registration_ids = {}
+        self.subscriptions = URIPattern(allow_duplicate=True)
+        self.registrations = URIPattern(allow_duplicate=False)
 
         self.calls = {}
         self.call_ids = {}
@@ -31,27 +26,14 @@ class Realm:
         Subscribes a client to a topic.
         Returns a subscription_id
         """
-        subscription_id = generate_id()
-        self.subscriptions.setdefault(topic, {})[subscription_id] = session
-        self.subscription_ids.setdefault(session, {})[subscription_id] = topic
-        return subscription_id
+        return self.subscriptions.register_uri(session, topic, options.get("match"))
 
     def unsubscribe(self, session, subscription_id):
         """
         Unsubscribes a client from a subscription_id
         Returns True if unsubscribed, otherwise False
         """
-        topic = self.subscription_ids.get(session, {}).get(subscription_id)
-        if not topic:
-            return False
-
-        del self.subscription_ids[session][subscription_id]
-        if not self.subscription_ids[session]:
-            del self.subscription_ids[session]
-
-        del self.subscriptions[topic][subscription_id]
-
-        return True
+        return self.subscriptions.unregister_uri(session, subscription_id)
 
     def publish(self, options, topic, args=None, kwargs=None):
         """
@@ -59,62 +41,49 @@ class Realm:
         Optionally returns a publication_id.
         """
         publication_id = generate_id()
-        if topic in self.subscriptions:
+        subscriptions = self.subscriptions.match_uri(topic)
+        if subscriptions:
             event_args = []
             if args is not None:
                 event_args.append(args)
                 if kwargs is not None:
                     event_args.append(kwargs)
 
-            for subscription_id, subscription_session in self.subscriptions[
-                topic
-            ].items():
-                cmd = [OP.EVENT, subscription_id, publication_id, {}] + event_args
+            for subscription_session, subscription_id in subscriptions:
+                cmd = [
+                    OP.EVENT,
+                    subscription_id,
+                    publication_id,
+                    {"topic": topic},
+                ] + event_args
                 subscription_session.send(*cmd)
 
         if options.get("acknowledge"):
             return publication_id
 
     ### Dealer functionality ###
-    def register(self, session, procedure):
+    def register(self, session, options, procedure):
         """
         Registers a procedure.
         Returns a registration_id
         """
-        if procedure in self.registrations:
-            return None
-
-        registration_id = generate_id()
-
-        self.registrations[procedure] = (session, registration_id)
-        self.registration_ids.setdefault(session, {})[registration_id] = procedure
-
-        return registration_id
+        return self.registrations.register_uri(session, procedure, options.get("match"))
 
     def unregister(self, session, registration_id):
         """
         Unregisters a procedure.
         """
-        procedure = self.registration_ids.get(session, {}).get(registration_id)
-        if not procedure:
-            return False
-
-        del self.registration_ids[session][registration_id]
-        if not self.registration_ids[session]:
-            del self.registration_ids[session]
-
-        del self.registrations[procedure]
-
-        return True
+        return self.registrations.unregister_uri(session, registration_id)
 
     def call(self, session, request_id, procedure, args=None, kwargs=None):
         """
         Call a procedure.
         """
-        if procedure not in self.registrations:
+        match = self.registrations.match_uri(procedure)
+        if not match:
             return False
 
-        procedure_session, procedure_registration_id = self.registrations[procedure]
+        procedure_session, procedure_registration_id = match
 
         invocation_args = []
         if args is not None:
@@ -127,7 +96,7 @@ class Realm:
             OP.INVOCATION,
             invocation_request_id,
             procedure_registration_id,
-            {},
+            {"procedure": procedure},
         ] + invocation_args
         procedure_session.send(*cmd)
 
@@ -188,19 +157,8 @@ class Realm:
     def session_lost(self, session):
         self.sessions.discard(session)
 
-        if session in self.subscription_ids:
-            for subscription_id, topic in self.subscription_ids[session].items():
-                del self.subscriptions[topic][subscription_id]
-                if not self.subscriptions[topic]:
-                    del self.subscriptions[topic]
-
-            del self.subscription_ids[session]
-
-        if session in self.registration_ids:
-            for registration_id, procedure in self.registration_ids[session].items():
-                del self.registrations[procedure]
-
-            del self.registration_ids[session]
+        self.subscriptions.unregister_session(session)
+        self.registrations.unregister_session(session)
 
         if session in self.invocations:
             for invocation_id in self.invocations[session]:

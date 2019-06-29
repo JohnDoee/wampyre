@@ -496,3 +496,77 @@ def test_uri_denied(transport):
     assert opcode == OP.SUBSCRIBED
     assert Pattern("id", "id")(*args)
     assert transport._last_id == args[0]
+
+
+def test_subscribe_wildcard(transport, transport2, transport3):
+    transport.connect("a.realm")
+    transport2.connect("a.realm")
+    transport3.connect("a.realm")
+
+    transport.receive(
+        OP.SUBSCRIBE, transport.generate_id(), {"match": "wildcard"}, "a..topic"
+    )
+    opcode, args = transport.get_reply()
+    assert opcode == OP.SUBSCRIBED
+    assert Pattern("id", "id")(*args)
+    assert transport._last_id == args[0]
+    transport_a_topic_subscription_id = args[1]
+
+    transport2.receive(
+        OP.PUBLISH, transport.generate_id(), {}, "a.good.topic", ["a"], {"b": "c"}
+    )
+    opcode, args = transport.get_reply()
+    assert opcode == OP.EVENT
+    assert Pattern("id", "id", "dict", "list", "dict")(*args)
+    assert args[0] == transport_a_topic_subscription_id
+    assert args[2] == {"topic": "a.good.topic"}
+    assert args[3] == ["a"]
+    assert args[4] == {"b": "c"}
+
+    transport.receive(
+        OP.UNSUBSCRIBE, transport.generate_id(), transport_a_topic_subscription_id
+    )
+    opcode, args = transport.get_reply()
+    assert opcode == OP.UNSUBSCRIBED
+    assert Pattern("id")(*args)
+    assert transport._last_id == args[0]
+
+    transport2.receive(
+        OP.PUBLISH, transport.generate_id(), {}, "a.good.topic", ["a"], {"b": "c"}
+    )
+    assert transport.is_empty()
+
+
+def test_register_wildcard(transport, transport2, transport3):
+    transport.connect("a.realm")
+    transport2.connect("a.realm")
+    transport3.connect("a.realm")
+
+    transport.receive(
+        OP.REGISTER, transport.generate_id(), {"match": "wildcard"}, "a..procedure"
+    )
+    opcode, args = transport.get_reply()
+    assert opcode == OP.REGISTERED
+    assert Pattern("id", "id")(*args)
+    assert transport._last_id == args[0]
+    assert transport.is_empty()
+    transport_register_id = args[1]
+
+    transport3.receive(OP.REGISTER, transport.generate_id(), {"match": "prefix"}, "a")
+    opcode, args = transport3.get_reply()
+
+    transport2.receive(
+        OP.CALL, transport2.generate_id(), {}, "a.cool.procedure", ["a"], {"b": "c"}
+    )
+    assert transport2.is_empty()
+
+    opcode, args = transport.get_reply()
+    assert opcode == OP.INVOCATION
+    assert Pattern("id", "id", "dict", "list", "dict")(*args)
+    assert transport.is_empty()
+    assert args[1] == transport_register_id
+    assert args[2] == {"procedure": "a.cool.procedure"}
+    assert args[3] == ["a"]
+    assert args[4] == {"b": "c"}
+
+    assert transport3.is_empty()

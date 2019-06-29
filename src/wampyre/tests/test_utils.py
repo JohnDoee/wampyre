@@ -1,43 +1,66 @@
-from ..utils import uri_pattern_to_prefix, uri_pattern_to_wildcard
+from ..utils import URIPattern
 
 
-def test_uri_pattern_to_prefix():
-    register_uri_pattern = uri_pattern_to_prefix("com.myapp.myobject1")
+def test_uri_pattern_no_duplicate():
+    pattern = URIPattern(False)
 
-    assert register_uri_pattern.match("com.myapp.myobject1.myprocedure1")
-    assert register_uri_pattern.match("com.myapp.myobject1-mysubobject1")
-    assert register_uri_pattern.match("com.myapp.myobject1.mysubobject1.myprocedure1")
-    assert register_uri_pattern.match("com.myapp.myobject1")
+    pattern_s1_p1 = pattern.register_uri("testsession1", "a1.b2.c3.d4.e55", "exact")
+    pattern_s2_p1 = pattern.register_uri("testsession2", "a1.b2.c3", "prefix")
+    pattern_s3_p1 = pattern.register_uri("testsession3", "a1.b2.c3.d4", "prefix")
+    pattern_s4_p1 = pattern.register_uri("testsession4", "a1.b2..d4.e5", "wildcard")
+    pattern_s5_p1 = pattern.register_uri("testsession5", "a1.b2.c33..e5", "wildcard")
+    pattern_s6_p1 = pattern.register_uri("testsession6", "a1.b2..d4.e5..g7", "wildcard")
+    pattern_s7_p1 = pattern.register_uri("testsession7", "a1.b2..d4..f6.g7", "wildcard")
 
-    assert not register_uri_pattern.match("com.myapp.myobject2")
-    assert not register_uri_pattern.match("com.myapp.myobject")
+    assert pattern.match_uri("a1.b2.c3.d4.e55") == ("testsession1", pattern_s1_p1)
+    assert pattern.match_uri("a1.b2.c3.d98.e74") == ("testsession2", pattern_s2_p1)
+    assert pattern.match_uri("a1.b2.c3.d4.e325") == ("testsession3", pattern_s3_p1)
+    assert pattern.match_uri("a1.b2.c55.d4.e5") == ("testsession4", pattern_s4_p1)
+    assert pattern.match_uri("a1.b2.c33.d4.e5") == ("testsession5", pattern_s5_p1)
+    assert pattern.match_uri("a1.b2.c88.d4.e5.f6.g7") == ("testsession6", pattern_s6_p1)
+    assert pattern.match_uri("a2.b2.c2.d2.e2") is None
 
-    subscribe_uri_pattern = uri_pattern_to_prefix("com.myapp.topic.emergency")
-
-    assert subscribe_uri_pattern.match("com.myapp.topic.emergency.11")
-    assert subscribe_uri_pattern.match("com.myapp.topic.emergency-low")
-    assert subscribe_uri_pattern.match("com.myapp.topic.emergency.category.severe")
-    assert subscribe_uri_pattern.match("com.myapp.topic.emergency")
+    assert not pattern.register_uri("testsession10", "a1.b2.c3.d4.e55", "exact")
 
 
-def test_uri_pattern_to_wildcard():
-    register_uri_pattern = uri_pattern_to_wildcard("com.myapp..myprocedure1")
+def test_uri_pattern_duplicate():
+    pattern = URIPattern(True)
 
-    assert register_uri_pattern.match("com.myapp.myobject1.myprocedure1")
-    assert register_uri_pattern.match("com.myapp.myobject2.myprocedure1")
+    pattern_s1_p1 = pattern.register_uri("testsession1", "a1.b2.c3.d4.e55", "exact")
+    pattern_s2_p1 = pattern.register_uri("testsession2", "a1.b2.c3", "prefix")
+    pattern_s3_p1 = pattern.register_uri("testsession3", "a1.b2..d4.e5", "wildcard")
+    pattern_s4_p1 = pattern.register_uri("testsession4", "a1.b2..d4.e5..g7", "wildcard")
 
-    assert not register_uri_pattern.match(
-        "com.myapp.myobject1.myprocedure1.mysubprocedure1"
-    )
-    assert not register_uri_pattern.match("com.myapp.myobject1.myprocedure2")
-    assert not register_uri_pattern.match("com.myapp2.myobject1.myprocedure1")
+    assert sorted(pattern.match_uri("a1.b2.c3.d4.e55")) == [
+        ("testsession1", pattern_s1_p1),
+        ("testsession2", pattern_s2_p1),
+    ]
+    assert sorted(pattern.match_uri("a1.b2.c55.d4.e5")) == [
+        ("testsession3", pattern_s3_p1)
+    ]
+    assert sorted(pattern.match_uri("a1.b2.c3.d4.e5")) == [
+        ("testsession2", pattern_s2_p1),
+        ("testsession3", pattern_s3_p1),
+    ]
+    assert sorted(pattern.match_uri("a2.b2.c2.d2.e2")) == []
 
-    subscribe_uri_pattern = uri_pattern_to_wildcard("com.myapp..userevent")
 
-    assert subscribe_uri_pattern.match("com.myapp.foo.userevent")
-    assert subscribe_uri_pattern.match("com.myapp.bar.userevent")
-    assert subscribe_uri_pattern.match("com.myapp.a12.userevent")
+def test_uri_unregister():
+    pattern = URIPattern(True)
 
-    assert not subscribe_uri_pattern.match("com.myapp.foo.userevent.bar")
-    assert not subscribe_uri_pattern.match("com.myapp.foo.user")
-    assert not subscribe_uri_pattern.match("com.myapp2.foo.userevent")
+    pattern_s1_p1 = pattern.register_uri("testsession1", "a1.b2.c3.d4.e55", "exact")
+    pattern_s1_p2 = pattern.register_uri("testsession1", "a1.b2.c3.d4.e56", "exact")
+    pattern_s1_p3 = pattern.register_uri("testsession1", "a1.b2.c3", "prefix")
+    pattern_s2_p1 = pattern.register_uri("testsession2", "a1.b2.c3.d4.e56", "exact")
+    pattern_s2_p2 = pattern.register_uri("testsession2", "a1.b2.c3.d4", "prefix")
+
+    assert pattern.unregister_uri("testsession1", pattern_s1_p1)
+    assert sorted(pattern.match_uri("a1.b2.c3.d4.e55")) == [
+        ("testsession1", pattern_s1_p3),
+        ("testsession2", pattern_s2_p2),
+    ]
+    assert pattern.unregister_session("testsession1")
+    assert sorted(pattern.match_uri("a1.b2.c3.d4.e55")) == [
+        ("testsession2", pattern_s2_p2)
+    ]
+    assert pattern.unregister_session("testsession2")

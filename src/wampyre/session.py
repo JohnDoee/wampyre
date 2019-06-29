@@ -216,7 +216,7 @@ class Session:
     def handle_register(self, request_id, options, procedure):
         self.method_uri_allowed("register", procedure)
 
-        registration_id = self.realm.register(self, procedure)
+        registration_id = self.realm.register(self, options, procedure)
         if registration_id:
             self.send(OP.REGISTERED, request_id, registration_id)
         else:
